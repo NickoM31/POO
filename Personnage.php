@@ -1,138 +1,169 @@
 <?php
-class Personnage
+
+abstract class Personnage
 {
-    private $_force ;
-    private $_localisation;
-    private $_experience;
-    private $_degats;
-    private $_textADire;
+    protected $atout,
+        $degats,
+        $id,
+        $nom,
+        $timeEndormi,
+        $type;
 
-    const FORCE_PETITE = 20 ;
-    const FORCE_MOYENNE = 50 ;
-    const FORCE_GRANDE = 80 ;
+    const CEST_MOI = 1;
+    const PERSONNAGE_TUE = 2;
+    const PERSONNAGE_FRAPPE = 3;
+    const PERSONNAGE_ENSORCELE = 4;
+    const PAS_DE_MAGIE = 5;
+    const PERSO_ENDORMI = 6;
 
-    public function __construct($forceInitial)
+    public function __construct(array $donnees)
     {
-        //echo 'Voici le constructeur ! <br />';
-        $this->setForce($forceInitial);
+        $this->hydrate($donnees);
+        $this->type = strtolower(static::class);
     }
 
-    public function deplacer()
+    public function estEndormi()
     {
-       return $this->_localisation;
+        return $this->timeEndormi > time();
     }
 
-    public function setDeplacement($localisation)
+    public function frapper(Personnage $perso)
     {
-        $this->_localisation = $localisation;
-    }
-
-    public function frapper(Personnage $persoAFrapper)
-    {
-        $persoAFrapper->_degats += $this->_force;
-    }
-
-    public function afficherExperience()
-    {
-        echo $this->_experience;
-    }
-
-    public function gagnerExperience()
-    {
-        $this->_experience++;
-    }
-
-    public function setForce($force)
-    {
-        if (!is_int($force))
+        if ($perso->id == $this->id)
         {
-            trigger_error('La force d\'un personnage doit être un nombre entier', E_USER_WARNING);
-            return;
+            return self::CEST_MOI;
         }
-        if ($force > 100)
+
+        if ($this->estEndormi())
         {
-            trigger_error('La force d\'un personnage ne peut dépasser 100', E_USER_WARNING);
-            return;
+            return self::PERSO_ENDORMI;
         }
-        if (in_array($force, [self::FORCE_PETITE, self::FORCE_MOYENNE, self::FORCE_GRANDE]))
+
+        return $perso->recevoirDegats();
+    }
+
+    public function hydrate(array $donnees)
+    {
+        foreach ($donnees as $key => $value)
         {
-        $this->_force = $force;
+            $method = 'set'.ucfirst($key);
+
+            if (method_exists($this, $method))
+            {
+                $this->$method($value);
+            }
         }
     }
 
-    public function setExperience($experience)
+    public function nomValide()
     {
-        if (!is_int($experience))
+        return !empty($this->nom);
+    }
+
+    public function recevoirDegats()
+    {
+        $this->degats += 5;
+
+        if ($this->degats >= 100)
         {
-            trigger_error('L\'expérience d\'un personnage doit être un nombre entier', E_USER_WARNING);
-            return;
+            return self::PERSONNAGE_TUE;
         }
-        if ($experience > 100)
-        {
-            trigger_error('L\'expérience d\'un personnage ne peur dépasser 100', E_USER_WARNING);
-            return;
-        }
-        $this->experience = $experience;
+
+        return self::PERSONNAGE_FRAPPE;
+    }
+
+    public function reveil()
+    {
+        $secondes = $this->timeEndormi;
+        $secondes -= time();
+
+        $heures = floor($secondes / 3600);
+
+        $secondes -= $heures * 3600;
+
+        $minutes = floor($secondes / 60);
+
+        $secondes -= $minutes * 60;
+
+        $heures .= $heures <= 1 ? ' heure' : ' heures';
+
+        $minutes .= $minutes <= 1 ? ' minute' : ' minutes';
+
+        $secondes .= $secondes <= 1 ? ' seconde' : ' secondes';
+
+        return $heures . ', ' . $minutes . ' et ' . $secondes;
+    }
+
+    public function atout()
+    {
+        return $this->atout;
     }
 
     public function degats()
     {
-        return $this->_degats;
+        return $this->degats;
+    }
+
+    public function id()
+    {
+        return $this->id;
+    }
+
+    public function nom()
+    {
+        return $this->nom;
+    }
+
+    public function timeEndormi()
+    {
+        return $this->timeEndormi;
+    }
+
+    public function type()
+    {
+        return $this->type;
+    }
+
+    public function setAtout($atout)
+    {
+        $atout = (int) $atout;
+
+        if ($atout >= 0 && $atout <= 100)
+        {
+            $this->atout = $atout;
+        }
     }
 
     public function setDegats($degats)
     {
-        if (!is_int($degats))
+        $degats = (int) $degats;
+
+        if ($degats >= 0 && $degats <= 100)
         {
-            trigger_error('Le niveau de dégâts d\'un personnage dout être un nombre entier', E_USER_WARNING);
-            return;
+            $this->degats = $degats;
         }
-        $this->degats = $degats;
     }
 
-    public function force()
+    public function setId($id)
     {
-        return $this->_force;
+        $id = (int) $id;
+
+        if ($id > 0)
+        {
+            $this->id = $id;
+        }
     }
 
-    public function experience()
+    public function setNom($nom)
     {
-        return $this->_experience;
+        if (is_string($nom))
+        {
+            $this->nom = $nom;
+        }
     }
 
-    public static function parler()
+    public function setTimeEndormi($time)
     {
-        echo 'Je suis un personnage !';
-        echo self::$_textADire;
+        $this->timeEndormi = (int) $time;
     }
-}
-
-$perso1 = new Personnage(60);
-$perso2 = new Personnage(100);
-
-
-$perso1->setForce(10);
-$perso1->setExperience(2);
-
-$perso2->setForce(90);
-$perso2->setExperience(58);
-
-$perso1->frapper($perso2);
-$perso1->gagnerExperience();
-
-$perso2->frapper($perso1);
-$perso2->gagnerExperience();
-
-$perso1->deplacer();
-
-echo 'Le personnage 1 a ', $perso1->force(), ' de force, contrairement au personnage 2 qui a ',
-    $perso2->force(),' de force.<br />';
-echo 'Le personnage 1 a ', $perso1->experience(), ' d\'expérience, contrairement au personnage 2 qui a ',
-    $perso2->experience(), ' d\'expérience. <br />';
-echo 'Le personnage 1 a ', $perso2->degats(), ' de dégâts, contrairement au personnage 2 qui a ',
-    $perso2->degats(), ' de dégâts. <br />';
-//if ( $perso1->experience() == 2){
-//    echo 'Tu peux te déplacer jusqu\'à ', $perso1->deplacer(), '.';
-//}else{
-//    echo 'Bad move ! Retour à la case prison ! ';
-//}
+    }
